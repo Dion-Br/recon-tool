@@ -1,18 +1,14 @@
-import socket
-import os
-from scapy.layers.inet import IP, ICMP
-from scapy.all import *
+import scapy.all as scapy
 
 def send_icmp_request(target, timeout=2):
-    # Create an ICMP packet (ping request)
-    packet = IP(dst=target, ttl=64) / ICMP()
+    # ICMP ping maken
+    packet = scapy.IP(dst=target, ttl=64) / scapy.ICMP()
 
-    # Send the packet and wait for a response
-    reply = sr1(packet, timeout=timeout)
+    # Ping sturen en op response wachten
+    reply = scapy.sr1(packet, timeout=timeout)
 
-    # Check if a response was received
+    # Repsonse controleren en log
     if reply:
-        # Print information about the response
         print(f"Target {target} is reachable")
         return(reply.show())
     else:
@@ -20,10 +16,10 @@ def send_icmp_request(target, timeout=2):
         return False
 
 def main():
-    # Set the target IP address
+    # IP target instellen (werkt ook met links)
     target_ip = "1.1.1.1"
 
-    # Send ICMP request to the target
+    # Ping naar target sturen
     send_icmp_request(target_ip)
 
 if __name__ == "__main__":
