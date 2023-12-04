@@ -7,10 +7,10 @@ def main():
     if send_icmp_request(target) is not False:
         # Als target online is verder gaan met recon
         # Port scanner implementeren
-        check_port(target, 80)
-        check_port(target, 443)
-        check_port(target, 8000)
-        check_port(target, 22)
+        open_ports = check_port(target, [22, 80, 443, 8000])
+
+        if open_ports:
+            print(open_ports)
         
 
 if __name__ == "__main__":
