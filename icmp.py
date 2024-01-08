@@ -7,13 +7,11 @@ def send_icmp_request(target, timeout=2):
     # Ping sturen en op response wachten
     reply = scapy.sr1(packet, timeout=timeout)
 
-    # Repsonse controleren en log
+    # Repsonse controleren en resultaat versturen
     if reply:
-        print(f"Target {target} is reachable")
-        return(reply.show())
+        return f"{target} is bereikbaar: {reply.show}"
     else:
-        print(f"Target {target} is unreachable")
-        return False
+        return f"{target} is onbereikbaar"
 
 def main():
     # IP target instellen (werkt ook met links)

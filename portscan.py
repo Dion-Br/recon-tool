@@ -1,4 +1,5 @@
 import scapy.all as scapy
+import nmap
 
 def check_port(target, port_list = [22, 80, 443, 8000]):
 
@@ -24,31 +25,35 @@ def check_port(target, port_list = [22, 80, 443, 8000]):
     return(open_port_list)
 
 def identify_service_on_open_ports(target, open_ports):
-    for port in open_ports:
-        # Create a packet to send to the target and port
-        packet = scapy.IP(dst=target) / scapy.TCP(dport=port, flags="S")
+    # Ensure target is a string
+    if not isinstance(target, str):
+        raise ValueError("Target should be a string.")
 
-        # Send the packet and receive the response
-        response = scapy.sr1(packet, timeout=1, verbose=False)
+    nm = nmap.PortScanner()
 
-        # Checking the response
-        print(f"Port {port} on {target} is open")
+    # Service identification 'sV' scan uitvoeren op de open poorten
+    nm.scan(target, arguments=f'-sS -p {",".join(map(str, open_ports))} -sV')
+    scan_results = nm.all_hosts(), nm
 
-        # Now, let's try to identify the service
-        try:
-            service_response = scapy.sr1(scapy.IP(dst=target) / scapy.TCP(dport=port, flags="S"), timeout=1, verbose=False)
-            if service_response and service_response.haslayer(scapy.TCP):
-                if service_response[scapy.TCP].flags == 0x14:
-                    print(f"The service on port {port} is likely closed.")
-                elif service_response[scapy.TCP].flags == 0x12:
-                    print(f"The service on port {port} is likely open.")
-                    # You can further analyze the response to identify the service here
-                else:
-                    print(f"Unable to determine the service on port {port} on {target}")
-            else:
-                print(f"Unable to determine the service on port {port} on {target}")
-        except Exception as e:
-            print(f"Error while identifying service on port {port}: {e}")
+    identified_services = []
+
+    # Service mooi weergeven
+    for host in scan_results[0]:
+        for port, info in scan_results[1][host]['tcp'].items():
+            if int(port) in open_ports:
+                service_name = info.get('product', 'Unknown Service')
+                version = info.get('version', 'Unknown Version')
+
+                identified_service = {
+                    'host': host,
+                    'port': int(port),
+                    'service_name': service_name,
+                    'version': version
+                }
+
+                identified_services.append(identified_service)
+
+    return identified_services
 
 def main():
     # Test instellen
