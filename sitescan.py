@@ -6,6 +6,48 @@ import socket
 import requests
 from bs4 import BeautifulSoup
 
+def analyze_http_headers(target_url):
+    try:
+        response = requests.get(target_url)
+        headers = response.headers
+        security_issues = []
+        
+        # Missende security headers controleren
+        missing_headers = ['Strict-Transport-Security', 'Content-Security-Policy', 'X-Content-Type-Options', 'X-Frame-Options', 'X-XSS-Protection']
+        for header in missing_headers:
+            if header not in headers:
+                security_issues.append(f"Missing security header: {header}")
+        return headers, security_issues
+
+    except Exception as e:
+        return None, [f"Error fetching headers: {e}"]
+    
+def find_sql_injections(target_url):
+    try:
+        response = requests.get(target_url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        forms = soup.find_all('form')
+
+        vulnerabilities = []
+
+        for form in forms:
+            form_data = {}
+            for input_tag in form.find_all('input'):
+                form_data[input_tag.get('name')] = 'injected_value'
+
+            response = requests.post(target_url, data=form_data)
+
+            if "error" in response.text.lower():
+                vulnerabilities.append({
+                    'form_action': form.get('action'),
+                    'vulnerability_type': 'SQL Injection'
+                })
+
+        return vulnerabilities
+
+    except Exception as e:
+        return [{'error': str(e)}]
+
 class SSLCertificateMonitor:
     def __init__(self, domain, port=443):
         self.domain = domain
@@ -24,18 +66,21 @@ class SSLCertificateMonitor:
 
     # Functie die geldigheid controleert
     def check_certificate_expiration(self, days_before_expiry=30):
-        certificate = self.get_certificate()
-        if certificate:
-            expiration_date = certificate.not_valid_after
-            current_date = datetime.datetime.now()
-            remaining_days = (expiration_date - current_date).days
+        try:
+            certificate = self.get_certificate()
+            if certificate:
+                expiration_date = certificate.not_valid_after
+                current_date = datetime.datetime.now()
+                remaining_days = (expiration_date - current_date).days
 
-            if remaining_days <= 0:
-                return f"Het SSL/TLS certificaat voor {self.domain} is vervallen."
-            elif remaining_days <= days_before_expiry:
-                return f"Het SSL/TLS certificaat voor {self.domain} zal vervallen in {remaining_days} dagen."
-            else:
-                return f"Het SSL/TLS certificaat voor {self.domain} is nog {remaining_days} dagen geldig."
+                if remaining_days <= 0:
+                    return f"Het SSL/TLS certificaat voor {self.domain} is vervallen."
+                elif remaining_days <= days_before_expiry:
+                    return f"Het SSL/TLS certificaat voor {self.domain} zal vervallen in {remaining_days} dagen."
+                else:
+                    return f"Het SSL/TLS certificaat voor {self.domain} is nog {remaining_days} dagen geldig."
+        except Exception as e:
+            return f"Er is een fout of SSL/TLS certificaat voor {self.domain} is vervallen."
 
 class LinkExtractor:
     def __init__(self, target_url):
